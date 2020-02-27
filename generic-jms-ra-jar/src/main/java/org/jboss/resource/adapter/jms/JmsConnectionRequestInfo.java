@@ -39,7 +39,7 @@ public class JmsConnectionRequestInfo implements ConnectionRequestInfo {
     private String clientID;
 
     private boolean transacted = true;
-    private int acknowledgeMode = Session.AUTO_ACKNOWLEDGE;
+    private int acknowledgeMode = Session.SESSION_TRANSACTED;
     private int type = JmsConnectionFactory.AGNOSTIC;
 
     /**

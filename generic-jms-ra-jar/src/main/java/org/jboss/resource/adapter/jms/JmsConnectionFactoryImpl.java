@@ -36,6 +36,7 @@ import javax.resource.spi.ConnectionManager;
 import javax.resource.spi.ManagedConnectionFactory;
 
 import org.jboss.logging.Logger;
+import org.jboss.resource.adapter.jms.util.TransactionUtils;
 
 /**
  * The the connection factory implementation for the JMS RA.
@@ -216,7 +217,7 @@ public class JmsConnectionFactoryImpl implements JmsConnectionFactory, Reference
 
     @Override
     public JMSContext createContext(String userName, String password) {
-        return createContext(userName, password, Session.AUTO_ACKNOWLEDGE);
+        return createContext(userName, password, TransactionUtils.isInTransaction() ? Session.SESSION_TRANSACTED : Session.AUTO_ACKNOWLEDGE);
     }
 
     @Override
@@ -226,13 +227,22 @@ public class JmsConnectionFactoryImpl implements JmsConnectionFactory, Reference
 
     @Override
     public JMSContext createContext(String userName, String password, int sessionMode) {
-        JmsSessionFactoryImpl s = new JmsSessionFactoryImpl(mcf, cm, AGNOSTIC);
+        JmsSessionFactoryImpl s = new JmsSessionFactoryImpl(mcf, cm, JMS_CONTEXT);
         s.setUserName(userName);
         s.setPassword(password);
+        int effectiveSessionMode = sessionMode;
+        if (TransactionUtils.isInTransaction()) {
+            effectiveSessionMode = Session.SESSION_TRANSACTED;
+        }
         try {
-            JmsSession session = s.allocateConnection(sessionMode == Session.SESSION_TRANSACTED, sessionMode, AGNOSTIC);
+            JmsSession session = s.allocateConnection((effectiveSessionMode == Session.SESSION_TRANSACTED), effectiveSessionMode, JMS_CONTEXT);
             return new GenericJmsContext(s, session);
         } catch (JMSException e) {
+            try {
+                s.close();
+            } catch (JMSException e2) {
+                // ignored by intention
+            }
             JMSException jmse = findRootJMSException(e);
             if (jmse instanceof JMSSecurityException) {
                 throw new JMSSecurityRuntimeException(jmse.getMessage());

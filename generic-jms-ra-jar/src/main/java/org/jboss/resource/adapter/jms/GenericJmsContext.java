@@ -118,6 +118,7 @@ public class GenericJmsContext implements JMSContext {
     public void close() {
         // #17 - close the session factory to return the managed connection to the pool
         try {
+            session.close();
             sessionFactory.close();
         } catch (JMSException e) {
             e.printStackTrace();
