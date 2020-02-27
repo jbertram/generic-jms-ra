@@ -15,6 +15,7 @@
  */
 package org.jboss.resource.adapter.jms;
 
+import java.lang.reflect.Method;
 import javax.jms.CompletionListener;
 import javax.jms.Destination;
 import javax.jms.JMSException;
@@ -191,6 +192,19 @@ public class JMSProducerToMessageProducer implements MessageProducer {
 
     @Override
     public void close() throws JMSException {
+        //For Tibco
+        if (jmsProducer != null) {
+            try {
+                Method close = jmsProducer.getClass().getMethod("close");
+                try {
+                    close.invoke(close);
+                } catch (Exception ex) {
+                    throw new JMSException(ex.getMessage());
+                }
+            } catch (NoSuchMethodException ex) {
+                //do nothing
+            }
+        }
         jmsProducer = null;
         destination = null;
     }
